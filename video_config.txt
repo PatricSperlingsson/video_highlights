@@ -1,0 +1,27 @@
+# Video Compilation Configuration File
+# 
+# Format for video clips: filename | start_time | end_time | text_overlay | speed | arrow
+# Format for black screens: BLACK | duration | text
+# 
+# Times: Use seconds (26), mm:ss (1:12), or hh:mm:ss (1:12:30). Decimals supported (26.23)
+# Text overlay and arrow are optional - leave blank if you don't want them
+# Speed: 1=normal, 0.5=half speed (slow motion), 2=double speed, -1=reverse, -0.5=reverse slow motion
+#
+# Arrow format: degrees or degrees:x:y (x,y are pixel coordinates)
+# Degrees: 0=right, 45=down-right, 90=down, 135=down-left, 180=left, 225=up-left, 270=up, 315=up-right
+#
+# Example entries:
+# 20251108_090053.mp4 | 3 | 5 | jada | 1 | 0:800:400
+# 20251108_090053.mp4 | 3 | 5 | slow! | 0.5 |
+# 20251108_090053.mp4 | 3 | 5 | reverse | -1 |
+# 20251108_090053.mp4 | 3 | 5 | reverse slow | -0.5 |
+# BLACK | 2 | Goal Highlights
+# 20251018_090600.mp4 | 0 | 4.5 | nice goal! | 1 | 270
+# BLACK | 1.5 | 
+# 20251018_091008.mp4 | 2.5 | 7.25 | | 0.5 | 45:1200:600
+
+
+
+# Add your video clips below (one per line):
+~/Desktop/MyFiles/Private/Images/2025-Innebandy/MOT_Frosta_IBF_P13_14/20251108_100223.mp4 | 33 | 37 | Dålig täckning! | 1 | 175:1475:610
+

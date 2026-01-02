@@ -1,0 +1,5 @@
+*.mp4
+temp_clips/*
+
+# Ignore all txt config files except video_config.txt
+*_video_config.txt
