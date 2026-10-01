@@ -1,27 +1,60 @@
 # Video Compilation Configuration File
 # 
-# Format for video clips: filename | start_time | end_time | text_overlay | speed | arrow
+# Format for video clips: filename | start_time | end_time | [text_overlay] | [speed] | [arrow] | [waveform] | [noaudio]
 # Format for black screens: BLACK | duration | text
 # 
 # Times: Use seconds (26), mm:ss (1:12), or hh:mm:ss (1:12:30). Decimals supported (26.23)
-# Text overlay and arrow are optional - leave blank if you don't want them
+# Optional fields can be in any order: text_overlay, speed, arrow, waveform, noaudio
+# Text overlay: Any text you want displayed
 # Speed: 1=normal, 0.5=half speed (slow motion), 2=double speed, -1=reverse, -0.5=reverse slow motion
+#   Slow motion (speed below 1) is always muted
+# Arrow: "arrow" keyword followed by arrow parameters
+#   Use "arrow" alone for default (right), or "arrow 270" for degrees, or "arrow 45:800:600" for custom position
+#   Degrees: 0=right, 45=down-right, 90=down, 135=down-left, 180=left, 225=up-left, 270=up, 315=up-right
+# Waveform: "waveform" keyword to show audio amplitude visualization
+# NoAudio: "noaudio" keyword to mute the clip (replace audio with silence)
 #
-# Arrow format: degrees or degrees:x:y (x,y are pixel coordinates)
-# Degrees: 0=right, 45=down-right, 90=down, 135=down-left, 180=left, 225=up-left, 270=up, 315=up-right
+# Output resolution, frame rate and HDR/SDR are taken from the first video clip;
+# clips with a different size are scaled and padded (black bars) to match.
 #
 # Example entries:
-# 20251108_090053.mp4 | 3 | 5 | jada | 1 | 0:800:400
-# 20251108_090053.mp4 | 3 | 5 | slow! | 0.5 |
-# 20251108_090053.mp4 | 3 | 5 | reverse | -1 |
-# 20251108_090053.mp4 | 3 | 5 | reverse slow | -0.5 |
-# BLACK | 2 | Goal Highlights
-# 20251018_090600.mp4 | 0 | 4.5 | nice goal! | 1 | 270
-# BLACK | 1.5 | 
-# 20251018_091008.mp4 | 2.5 | 7.25 | | 0.5 | 45:1200:600
+# Normal playback:
+# 20251108_090053.mp4 | 3 | 5 | MÅL!!! | 1
+#
+# Replay (0.1 speed for frame-by-frame):
+# 20251108_090053.mp4 | 3 | 5 | Replay | 0.1
+#
+# Slow motion:
+# 20251108_090053.mp4 | 3 | 5 | Slow! | 0.5
+#
+# With waveform:
+# 20251108_090053.mp4 | 3 | 5 | | waveform
+#
+# With arrow (degrees):
+# 20251108_090053.mp4 | 3 | 5 | | arrow 270
+#
+# With arrow (custom position):
+# 20251108_090053.mp4 | 3 | 5 | | arrow 45:800:600
+#
+# Reverse:
+# 20251108_090053.mp4 | 3 | 5 | Reverse | -1
+#
+# Reverse slow motion:
+# 20251108_090053.mp4 | 3 | 5 | Reverse slow | -0.5
+#
+# Black screen with text:
+# BLACK | 1.5 | Goal Highlights
+#
+# Without audio:
+# 20251108_090053.mp4 | 3 | 5 | Nice goal! | 1 | noaudio
+#
+# Combined features:
+# 20251108_090053.mp4 | 3 | 5 | Nice goal! | 0.5 | arrow 90 | waveform
 
 
 
 # Add your video clips below (one per line):
-~/Desktop/MyFiles/Private/Images/2025-Innebandy/MOT_Frosta_IBF_P13_14/20251108_100223.mp4 | 33 | 37 | Dålig täckning! | 1 | 175:1475:610
-
+Screencast_from_2026-10-01_16-42-16.mp4 | 0 | 12 | | 1
+Screencast_from_2026-10-01_16-42-16.mp4 | 12 | 10:14 | | 5
+BLACK | 3 | A few moments later
+Screencast_from_2026-10-01_16-42-16.mp4 | 10:14 | 10:24 | | 1
