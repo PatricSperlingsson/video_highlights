@@ -64,6 +64,23 @@ def parse_config(config_file):
                         'type': 'black',
                         'duration': parse_time(parts[1]),
                         'text': parts[2] if len(parts) > 2 else '',
+                        'audio': str(Path(parts[3]).expanduser()) if len(parts) > 3 and parts[3] else '',
+                        'audio_start': parse_time(parts[4]) if len(parts) > 4 and parts[4] else None,
+                    })
+                except ValueError as e:
+                    print(f"Warning: Line {line_num} has invalid duration, skipping: {e}")
+                continue
+
+            if parts[0].upper() == 'IMAGE':
+                if len(parts) < 3:
+                    print(f"Warning: Line {line_num} has invalid format for image, skipping")
+                    continue
+                try:
+                    clips.append({
+                        'type': 'image',
+                        'filename': parts[1],
+                        'duration': parse_time(parts[2]),
+                        'text': parts[3] if len(parts) > 3 else '',
                     })
                 except ValueError as e:
                     print(f"Warning: Line {line_num} has invalid duration, skipping: {e}")
@@ -86,7 +103,7 @@ def parse_config(config_file):
             clip = {
                 'type': 'video', 'filename': parts[0], 'start': start, 'end': end,
                 'text': '', 'speed': 1.0, 'reverse': False, 'arrow': '',
-                'waveform': False, 'noaudio': False,
+                'waveform': False, 'noaudio': False, 'freeze': False,
             }
 
             # Optional fields may come in any order
@@ -108,7 +125,7 @@ def parse_config(config_file):
                 elif is_number(field):
                     speed = float(field)
                     if speed == 0:
-                        print(f"Warning: Line {line_num} speed 0 is invalid, using 1")
+                        clip['freeze'] = True
                         continue
                     clip['reverse'] = clip['reverse'] or speed < 0
                     clip['speed'] = abs(speed)
@@ -144,11 +161,24 @@ def probe_video(path):
             'transfer': stream.get('color_transfer', '')}
 
 
+def probe_has_audio(path):
+    result = subprocess.run(
+        ['ffprobe', '-v', 'error', '-select_streams', 'a', '-show_entries', 'stream=index',
+         '-of', 'csv=p=0', path],
+        capture_output=True, text=True, check=True)
+    return bool(result.stdout.strip())
+
+
 def probe_duration(path):
     result = subprocess.run(
-        ['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', path],
+        ['ffprobe', '-v', 'error', '-show_entries', 'format=duration:stream=duration',
+         '-of', 'default=nw=1:nk=1', path],
         capture_output=True, text=True, check=True)
-    return float(result.stdout.strip())
+    # Some formats report N/A for one of the two durations
+    for value in result.stdout.split():
+        if is_number(value):
+            return float(value)
+    raise ValueError(f"No duration found for {path}")
 
 
 def master_video_args(fmt):
@@ -239,8 +269,41 @@ def build_black_cmd(clip, fmt, index, output):
         vf.append(drawtext_filter(textfile, 72, '(h-text_h)/2'))
     vf.append(f'format={pix_fmt(fmt)}')
 
+    duration = clip['duration']
+    if clip['audio'] and Path(clip['audio']).exists():
+        start = clip['audio_start']
+        if start is None:
+            try:
+                start = max(0.0, (probe_duration(clip['audio']) - duration) / 2)
+            except ValueError:
+                print(f"Warning: Could not read length of '{clip['audio']}', starting audio at 0s")
+                start = 0.0
+        audio_input = ['-ss', str(start), '-i', clip['audio']]
+    else:
+        if clip['audio']:
+            print(f"Warning: Audio file '{clip['audio']}' not found, using silence")
+        audio_input = ['-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100']
+
     return ['ffmpeg', '-hide_banner', '-loglevel', 'error', '-stats', '-y',
-            '-f', 'lavfi', '-i', f"color=c=black:s={w}x{h}:r={fps}:d={clip['duration']}",
+            '-f', 'lavfi', '-i', f"color=c=black:s={w}x{h}:r={fps}:d={duration}",
+            *audio_input,
+            '-filter_complex', f"[0:v]{','.join(vf)}[vout];"
+                               "[1:a]aresample=44100,aformat=channel_layouts=stereo,apad[aout]",
+            '-map', '[vout]', '-map', '[aout]', '-t', str(duration),
+            *master_video_args(fmt), *AUDIO_ARGS, output]
+
+
+def build_image_cmd(clip, fmt, index, output):
+    w, h, fps = fmt['width'], fmt['height'], fmt['fps']
+    vf = [f'scale={w}:{h}', 'setsar=1', f'fps={fps}']
+    if clip['text']:
+        textfile = f'{TEMP_DIR}/text_{index:03d}.txt'
+        write_text_file(clip['text'], textfile, 60)
+        vf.append(drawtext_filter(textfile, 48, 'h-text_h-60'))
+    vf.append(f'format={pix_fmt(fmt)}')
+
+    return ['ffmpeg', '-hide_banner', '-loglevel', 'error', '-stats', '-y',
+            '-loop', '1', '-framerate', str(fps), '-t', str(clip['duration']), '-i', clip['filename'],
             '-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
             '-filter_complex', f"[0:v]{','.join(vf)}[vout]",
             '-map', '[vout]', '-map', '1:a', '-t', str(clip['duration']),
@@ -251,12 +314,16 @@ def build_video_cmd(clip, fmt, index, input_file, output):
     speed = clip['speed']
     duration = clip['end'] - clip['start']
     out_duration = duration / speed
+    has_audio = not clip['freeze'] and probe_has_audio(input_file)
     # Stretched audio sounds bad, so slow motion is always silent
-    noaudio = clip['noaudio'] or speed < 1
+    noaudio = clip['noaudio'] or speed < 1 or not has_audio
 
     video = ['setpts=PTS-STARTPTS']
     audio = ['asetpts=PTS-STARTPTS']
-    if clip['reverse']:
+    if clip['freeze']:
+        video = ['trim=end_frame=1', 'setpts=PTS-STARTPTS',
+                 f'tpad=stop_mode=clone:stop_duration={duration}']
+    elif clip['reverse']:
         video.append('reverse')
         audio.append('areverse')
     if speed != 1.0:
@@ -268,7 +335,9 @@ def build_video_cmd(clip, fmt, index, input_file, output):
     graph = []
     if clip['waveform']:
         graph.append(f"[0:v]{','.join(video)}[base]")
-        if noaudio:
+        if not has_audio:
+            graph.append('anullsrc=channel_layout=stereo:sample_rate=44100[aw]')
+        elif noaudio:
             graph.append(f"[0:a]{','.join(audio)}[aw]")
         else:
             graph.append(f"[0:a]{','.join(audio)},asplit=2[a0][aw]")
@@ -304,10 +373,11 @@ def build_video_cmd(clip, fmt, index, input_file, output):
 
 def create_compilation(clips, output_file):
     """Encode every clip with identical settings, then concatenate without re-encoding."""
-    video_clips = [c for c in clips if c['type'] == 'video']
-    for clip in video_clips:
+    file_clips = [c for c in clips if c['type'] in ('video', 'image')]
+    for clip in file_clips:
         clip['filename'] = str(Path(clip['filename']).expanduser())
-    missing = [c['filename'] for c in video_clips if not Path(c['filename']).exists()]
+    missing = [c['filename'] for c in file_clips if not Path(c['filename']).exists()]
+    video_clips = [c for c in file_clips if c['type'] == 'video']
     for name in sorted(set(missing)):
         print(f"Warning: File '{name}' not found, its clips will be skipped")
 
@@ -330,6 +400,11 @@ def create_compilation(clips, output_file):
         if clip['type'] == 'black':
             print(f"Creating black screen {i+1}/{len(clips)}: {clip['duration']}s '{clip['text']}'")
             cmd = build_black_cmd(clip, fmt, i, temp_output)
+        elif clip['type'] == 'image':
+            if clip['filename'] in missing:
+                continue
+            print(f"Creating image {i+1}/{len(clips)}: {Path(clip['filename']).name} ({clip['duration']}s)")
+            cmd = build_image_cmd(clip, fmt, i, temp_output)
         else:
             if clip['filename'] in missing:
                 continue

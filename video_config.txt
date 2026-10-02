@@ -1,12 +1,15 @@
 # Video Compilation Configuration File
 # 
 # Format for video clips: filename | start_time | end_time | [text_overlay] | [speed] | [arrow] | [waveform] | [noaudio]
-# Format for black screens: BLACK | duration | text
+# Format for black screens: BLACK | duration | text | [audio_file] | [audio_start] (default: middle of the audio)
+#   With audio_start, audio plays from that point and anything after duration seconds is cut from the end
+# Format for still images: IMAGE | filename | duration | [text] (stretched to the video resolution)
 # 
 # Times: Use seconds (26), mm:ss (1:12), or hh:mm:ss (1:12:30). Decimals supported (26.23)
 # Optional fields can be in any order: text_overlay, speed, arrow, waveform, noaudio
 # Text overlay: Any text you want displayed
 # Speed: 1=normal, 0.5=half speed (slow motion), 2=double speed, -1=reverse, -0.5=reverse slow motion
+#   0=freeze: show the frame at start_time for (end_time - start_time) seconds, silent
 #   Slow motion (speed below 1) is always muted
 # Arrow: "arrow" keyword followed by arrow parameters
 #   Use "arrow" alone for default (right), or "arrow 270" for degrees, or "arrow 45:800:600" for custom position
@@ -42,8 +45,18 @@
 # Reverse slow motion:
 # 20251108_090053.mp4 | 3 | 5 | Reverse slow | -0.5
 #
+# Freeze frame (still at 3s, held for 2s):
+# 20251108_090053.mp4 | 3 | 5 | Look here! | 0
+#
 # Black screen with text:
 # BLACK | 1.5 | Goal Highlights
+#
+# Black screen with text and sound:
+# BLACK | 3 | A few moments later | a_few_moments_later.mp3
+# BLACK | 3 | A few moments later | a_few_moments_later.mp3 | 1.5
+#
+# Still image for 5 seconds:
+# IMAGE | screenshot.png | 5 |
 #
 # Without audio:
 # 20251108_090053.mp4 | 3 | 5 | Nice goal! | 1 | noaudio
@@ -54,7 +67,11 @@
 
 
 # Add your video clips below (one per line):
-Screencast_from_2026-10-01_16-42-16.mp4 | 0 | 12 | | 1
-Screencast_from_2026-10-01_16-42-16.mp4 | 12 | 10:14 | | 5
-BLACK | 3 | A few moments later
+Screencast_from_2026-10-01_16-42-16.mp4 | 0 | 3 | | 1
+Screencast_from_2026-10-01_16-42-16.mp4 | 3 | 7 | | 0
+Screencast_from_2026-10-01_16-42-16.mp4 | 7 | 12 | | 1
+Screencast_from_2026-10-01_16-42-16.mp4 | 12 | 25 | | 5
+BLACK | 3 | A few moments later | a_few_moments_later_3s.flac | 0
 Screencast_from_2026-10-01_16-42-16.mp4 | 10:14 | 10:24 | | 1
+BLACK | 3 | And the result in gittools gerrit is...
+IMAGE | Screenshot_from_2026-10-01_17-04-48.png | 5 |
