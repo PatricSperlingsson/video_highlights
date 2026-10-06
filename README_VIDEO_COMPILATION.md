@@ -175,6 +175,57 @@ sources, freeze frames, images, black-screen audio offsets, duration fallbacks,
 missing-source errors, failed clips and export CLI options. These are unit tests;
 they do not verify actual encoded video, audio playback or FFmpeg compatibility.
 
+## Commit And Push To GitHub
+
+This repository uses SSH to authenticate to your personal GitHub account.
+An SSH key or its fingerprint is not a personal access token and cannot be
+entered at an HTTPS password prompt.
+
+### One-Time Setup On A New Computer Or Clone
+
+The computer needs the private SSH key matching a public key registered under
+your personal GitHub account in **Settings > SSH and GPG keys**. Never share
+the private key.
+
+```sh
+ssh -T git@github.com
+```
+
+Check that the greeting says `Hi PatricSperlingsson!`. GitHub's successful SSH
+test normally exits with code 1 because it does not provide shell access.
+If it greets your work account or reports `Permission denied (publickey)`,
+resolve which SSH key is being used before pushing.
+
+Configure this clone to use SSH rather than HTTPS:
+
+```sh
+git remote set-url origin git@github.com:PatricSperlingsson/video_highlights.git
+```
+
+This setting persists for this clone, so you do not need to repeat it for each
+push. SSH uses your local key, not the credentials in `.netrc`. If prompted for
+a key passphrase, enter it directly in your terminal.
+
+### Normal Workflow
+
+Run from the project folder after editing:
+
+```sh
+python3 -m unittest -v test_create_compilation
+git status --short
+git diff
+git add create_compilation.py test_create_compilation.py README_VIDEO_COMPILATION.md video_config.txt
+git diff --cached
+git commit -m "Describe your changes"
+git push origin main
+```
+
+Stage only the files you intend to publish; the explicit list above leaves out
+media files and extra local configs. Inspect the staged diff before committing.
+If the changes are already committed, just run `git push origin main`.
+Pushing uploads all local commits on `main` not yet on GitHub, but does not
+upload untracked or uncommitted files. No force push is needed.
+
 ## Troubleshooting
 
 - **Missing media:** check paths and filename case. All configured video, image
