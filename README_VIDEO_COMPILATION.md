@@ -160,6 +160,21 @@ aspect ratio. Prepare a collage at that resolution to avoid distortion. Image
 clips are silent; optional text appears at the bottom. SDR screenshots inserted
 into an HDR master are not tone-mapped and may have unexpected colours.
 
+## Tests
+
+Run the regression suite from the project folder:
+
+```sh
+python3 -m unittest -v test_create_compilation
+```
+
+The tests use Python's standard library; no extra packages or FFmpeg are needed.
+Filesystem and subprocess operations are mocked, so no media is opened or
+encoded. Coverage includes config parsing, explicit text line breaks, silent
+sources, freeze frames, images, black-screen audio offsets, duration fallbacks,
+missing-source errors, failed clips and export CLI options. These are unit tests;
+they do not verify actual encoded video, audio playback or FFmpeg compatibility.
+
 ## Troubleshooting
 
 - **Missing media:** check paths and filename case. All configured video, image
