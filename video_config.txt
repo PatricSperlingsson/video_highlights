@@ -15,7 +15,7 @@
 # 
 # Times: Use seconds (26), mm:ss (1:12), or hh:mm:ss (1:12:30). Decimals supported (26.23)
 # Optional fields can be in any order: text_overlay, speed, arrow, waveform, noaudio
-# Text overlay: Use \n for a new line. Example: First line\nSecond line
+# Text overlay: Any text you want displayed. Use \n for a new line. Example: First line\nSecond line
 # Speed: 1=normal, 0.5=half speed (slow motion), 2=double speed, -1=reverse, -0.5=reverse slow motion
 #   0=freeze: show the frame at start_time for (end_time - start_time) seconds, silent
 #   Slow motion (speed below 1) is always muted
