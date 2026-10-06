@@ -1,5 +1,13 @@
 # Video Compilation Configuration File
-# 
+# Run: ./create_compilation.py
+# Output: compilation.mp4 (source resolution + HDR/SDR; re-encoded)
+# Also WhatsApp: ./create_compilation.py --whatsapp
+# Output: compilation.mp4 + compilation_Whatsapp.mp4
+# Custom config/name: ./create_compilation.py video_config.txt -o highlights.mp4
+# WhatsApp from existing file: ./create_compilation.py -o highlights.mp4 --whatsapp-only
+# WhatsApp size target: ./create_compilation.py --whatsapp --whatsapp-max-mb 50
+# Help: ./create_compilation.py --help
+#
 # Format for video clips: filename | start_time | end_time | [text_overlay] | [speed] | [arrow] | [waveform] | [noaudio]
 # Format for black screens: BLACK | duration | text | [audio_file] | [audio_start] (default: middle of the audio)
 #   With audio_start, audio plays from that point and anything after duration seconds is cut from the end
@@ -7,7 +15,7 @@
 # 
 # Times: Use seconds (26), mm:ss (1:12), or hh:mm:ss (1:12:30). Decimals supported (26.23)
 # Optional fields can be in any order: text_overlay, speed, arrow, waveform, noaudio
-# Text overlay: Any text you want displayed
+# Text overlay: Use \n for a new line. Example: First line\nSecond line
 # Speed: 1=normal, 0.5=half speed (slow motion), 2=double speed, -1=reverse, -0.5=reverse slow motion
 #   0=freeze: show the frame at start_time for (end_time - start_time) seconds, silent
 #   Slow motion (speed below 1) is always muted
@@ -19,6 +27,11 @@
 #
 # Output resolution, frame rate and HDR/SDR are taken from the first video clip;
 # clips with a different size are scaled and padded (black bars) to match.
+# FPS rounded to whole number, limited to 24-60. Need at least one video.
+# No source audio = silence. IMAGE = silent. BLACK without audio = silent.
+# Short BLACK audio = silence at end. Missing video/image/audio = error + stop.
+# All source paths checked before encoding. Failed clip = error + stop.
+# WhatsApp = SDR, H.264, max 30fps, 7000kbps; size target defaults to 185 MB.
 #
 # Example entries:
 # Normal playback:
@@ -53,6 +66,7 @@
 #
 # Black screen with text and sound:
 # BLACK | 3 | A few moments later | a_few_moments_later.mp3
+# BLACK | 3 | A few moments later | a_few_moments_later.mp3 | 0
 # BLACK | 3 | A few moments later | a_few_moments_later.mp3 | 1.5
 #
 # Still image for 5 seconds:
@@ -67,11 +81,12 @@
 
 
 # Add your video clips below (one per line):
-Screencast_from_2026-10-01_16-42-16.mp4 | 0 | 3 | | 1
-Screencast_from_2026-10-01_16-42-16.mp4 | 3 | 7 | | 0
-Screencast_from_2026-10-01_16-42-16.mp4 | 7 | 12 | | 1
-Screencast_from_2026-10-01_16-42-16.mp4 | 12 | 25 | | 5
+Screencast_from_2026-10-02_12-00-19.mp4 | 0 | 15 | | 1
+Screencast_from_2026-10-02_12-00-19.mp4 | 15 | 2:42 | | 20
 BLACK | 3 | A few moments later | a_few_moments_later_3s.flac | 0
-Screencast_from_2026-10-01_16-42-16.mp4 | 10:14 | 10:24 | | 1
+Screencast_from_2026-10-02_12-00-19.mp4 | 2:45 | 2:53 | | 1
+Screencast_from_2026-10-02_12-00-19.mp4 | 2:56 | 3:00 | | 1
+Screencast_from_2026-10-02_12-00-19.mp4 | 3:00 | 3:42 | | 20
+Screencast_from_2026-10-02_12-00-19.mp4 | 3:42 | 3:45 | | 1
 BLACK | 3 | And the result in gittools gerrit is...
-IMAGE | Screenshot_from_2026-10-01_17-04-48.png | 5 |
+IMAGE | Screenshot_from_2026-10-02_12-10-09.png | 5 |

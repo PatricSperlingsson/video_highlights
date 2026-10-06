@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 Video Compilation Script
-Reads a config file and creates a compiled video with text overlays, plus a
-WhatsApp-friendly SDR version.
+Reads a config file and creates a compiled video with text overlays, optionally
+also exporting a WhatsApp-friendly SDR version.
 Requires: ffmpeg/ffprobe (with libx264, libx265, zscale) installed on your system
 """
 
@@ -200,7 +200,9 @@ def pix_fmt(fmt):
 
 def write_text_file(text, path, width):
     # textfile + expansion=none avoids having to escape ':', ',', '%' etc. for ffmpeg
-    Path(path).write_text(textwrap.fill(text, width), encoding='utf-8')
+    lines = text.replace('\\n', '\n').split('\n')
+    wrapped = '\n'.join(textwrap.fill(line, width) for line in lines)
+    Path(path).write_text(wrapped, encoding='utf-8')
 
 
 def drawtext_filter(textfile, fontsize, y):
@@ -270,7 +272,7 @@ def build_black_cmd(clip, fmt, index, output):
     vf.append(f'format={pix_fmt(fmt)}')
 
     duration = clip['duration']
-    if clip['audio'] and Path(clip['audio']).exists():
+    if clip['audio']:
         start = clip['audio_start']
         if start is None:
             try:
@@ -280,8 +282,6 @@ def build_black_cmd(clip, fmt, index, output):
                 start = 0.0
         audio_input = ['-ss', str(start), '-i', clip['audio']]
     else:
-        if clip['audio']:
-            print(f"Warning: Audio file '{clip['audio']}' not found, using silence")
         audio_input = ['-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100']
 
     return ['ffmpeg', '-hide_banner', '-loglevel', 'error', '-stats', '-y',
@@ -376,12 +376,19 @@ def create_compilation(clips, output_file):
     file_clips = [c for c in clips if c['type'] in ('video', 'image')]
     for clip in file_clips:
         clip['filename'] = str(Path(clip['filename']).expanduser())
-    missing = [c['filename'] for c in file_clips if not Path(c['filename']).exists()]
-    video_clips = [c for c in file_clips if c['type'] == 'video']
-    for name in sorted(set(missing)):
-        print(f"Warning: File '{name}' not found, its clips will be skipped")
+    sources = [c['filename'] for c in file_clips]
+    for clip in clips:
+        if clip['type'] == 'black' and clip.get('audio'):
+            clip['audio'] = str(Path(clip['audio']).expanduser())
+            sources.append(clip['audio'])
+    missing = sorted({name for name in sources if not Path(name).is_file()})
+    if missing:
+        for name in missing:
+            print(f"Error: Source file '{name}' not found or not a regular file")
+        return None
 
-    reference = next((c['filename'] for c in video_clips if c['filename'] not in missing), None)
+    video_clips = [c for c in file_clips if c['type'] == 'video']
+    reference = next((c['filename'] for c in video_clips), None)
     if reference is None:
         print("Error: No existing video files found in configuration file")
         return None
@@ -401,13 +408,9 @@ def create_compilation(clips, output_file):
             print(f"Creating black screen {i+1}/{len(clips)}: {clip['duration']}s '{clip['text']}'")
             cmd = build_black_cmd(clip, fmt, i, temp_output)
         elif clip['type'] == 'image':
-            if clip['filename'] in missing:
-                continue
             print(f"Creating image {i+1}/{len(clips)}: {Path(clip['filename']).name} ({clip['duration']}s)")
             cmd = build_image_cmd(clip, fmt, i, temp_output)
         else:
-            if clip['filename'] in missing:
-                continue
             print(f"Processing clip {i+1}/{len(clips)}: {Path(clip['filename']).name} "
                   f"({clip['start']}s - {clip['end']}s)")
             cmd = build_video_cmd(clip, fmt, i, clip['filename'], temp_output)
@@ -417,6 +420,7 @@ def create_compilation(clips, output_file):
             concat_list.append(f"file '{Path(temp_output).name}'")
         except subprocess.CalledProcessError as e:
             print(f"Error processing clip {i+1}: {e}")
+            return None
 
     if not concat_list:
         print("Error: No clips were successfully processed")
@@ -470,10 +474,13 @@ def main():
     parser = argparse.ArgumentParser(description='Create a highlight compilation from a config file.')
     parser.add_argument('config', nargs='?', default='video_config.txt', help='config file')
     parser.add_argument('-o', '--output', default='compilation.mp4',
-                        help='output base name; written as <name>.mp41 and <name>_Whatsapp.mp42')
-    parser.add_argument('--no-whatsapp', action='store_true', help='skip the WhatsApp version')
+                        help='output name; written as <name>.mp4 and optionally <name>_Whatsapp.mp4')
+    whatsapp_options = parser.add_mutually_exclusive_group()
+    whatsapp_options.add_argument('--whatsapp', action='store_true',
+                                  help='also create a WhatsApp-friendly SDR version')
+    whatsapp_options.add_argument('--no-whatsapp', action='store_true', help=argparse.SUPPRESS)
     parser.add_argument('--whatsapp-only', action='store_true',
-                        help='only create the WhatsApp version from an existing master (.mp41)')
+                        help='only create the WhatsApp version from an existing master (.mp4)')
     parser.add_argument('--whatsapp-max-mb', type=float, default=WHATSAPP_MAX_MB,
                         help=f'size limit for the WhatsApp version (default {WHATSAPP_MAX_MB})')
     args = parser.parse_args()
@@ -490,9 +497,8 @@ def main():
             sys.exit(1)
 
     output = Path(args.output)
-    suffix = output.suffix or '.mp4'
-    master_file = str(output.with_name(f'{output.stem}{suffix}1'))
-    whatsapp_file = str(output.with_name(f'{output.stem}_Whatsapp{suffix}2'))
+    master_file = str(output.with_suffix('.mp4'))
+    whatsapp_file = str(output.with_name(f'{output.stem}_Whatsapp.mp4'))
 
     if args.whatsapp_only:
         if not Path(master_file).exists():
@@ -514,7 +520,7 @@ def main():
         print("\nCompilation failed. Check the errors above.")
         sys.exit(1)
 
-    if not args.no_whatsapp:
+    if args.whatsapp:
         create_whatsapp_version(master_file, whatsapp_file, fmt, args.whatsapp_max_mb)
 
     print("\nDone!")
