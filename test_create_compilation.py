@@ -41,7 +41,24 @@ class ConfigTests(unittest.TestCase):
 
     def test_image(self):
         clip = parse_entries('IMAGE | screenshot | 5 |')[0]
-        self.assertEqual(clip, {'type': 'image', 'filename': 'screenshot', 'duration': 5, 'text': ''})
+        self.assertEqual(clip, {'type': 'image', 'filename': 'screenshot', 'duration': 5,
+                                'text': '', 'textbox': False})
+
+    def test_textbox_video_keyword_order(self):
+        for fields in ('Title | 0 | textbox', 'TEXTBOX | Title | 0'):
+            with self.subTest(fields=fields):
+                clip = parse_entries('source | 3 | 6 | ' + fields)[0]
+                self.assertTrue(clip['textbox'])
+                self.assertTrue(clip['freeze'])
+                self.assertEqual(clip['text'], 'Title')
+
+    def test_textbox_image_keyword(self):
+        clip = parse_entries('IMAGE | screenshot | 5 | Title | textbox')[0]
+        self.assertTrue(clip['textbox'])
+        self.assertEqual(clip['text'], 'Title')
+
+    def test_textbox_defaults_off_for_video(self):
+        self.assertFalse(parse_entries('source | 3 | 6 | Title')[0]['textbox'])
 
     def test_black_audio_offsets(self):
         for field, expected in [('', None), (' | 0', 0), (' | 0.7', 0.7), (' | 1:12', 72)]:
@@ -54,6 +71,16 @@ class ConfigTests(unittest.TestCase):
 
 
 class TextTests(unittest.TestCase):
+    def test_outline_is_default(self):
+        graph = app.drawtext_filter('unused-text', 48, 'h-text_h-60')
+        self.assertIn('bordercolor=black:borderw=3', graph)
+        self.assertNotIn(':box=1', graph)
+
+    def test_textbox_adds_background_and_keeps_outline(self):
+        graph = app.drawtext_filter('unused-text', 48, 'h-text_h-60', textbox=True)
+        self.assertIn('bordercolor=black:borderw=3', graph)
+        self.assertIn(':box=1:boxcolor=black@0.6:boxborderw=12', graph)
+
     def test_explicit_newlines_and_wrapping(self):
         cases = [
             (r'And the result in\ngittools gerrit is...', 40, 'And the result in\ngittools gerrit is...'),
@@ -71,6 +98,25 @@ class TextTests(unittest.TestCase):
 class CommandTests(unittest.TestCase):
     def setUp(self):
         self.fmt = {'width': 1454, 'height': 984, 'fps': 29, 'transfer': ''}
+
+    def test_textbox_reaches_video_and_image_filters(self):
+        for entry in ('source | 3 | 6 | First\\nSecond | 0 | textbox',
+                      'IMAGE | screenshot | 5 | First\\nSecond | textbox'):
+            with self.subTest(entry=entry), patch.object(app.Path, 'write_text') as write:
+                clip = parse_entries(entry)[0]
+                if clip['type'] == 'video':
+                    command = app.build_video_cmd(clip, self.fmt, 0, 'source', 'unused-output')
+                else:
+                    command = app.build_image_cmd(clip, self.fmt, 0, 'unused-output')
+                graph = command[command.index('-filter_complex') + 1]
+                self.assertIn(':box=1:boxcolor=black@0.6:boxborderw=12', graph)
+                self.assertEqual(write.call_args.args[0], 'First\nSecond')
+
+    def test_textbox_without_text_does_not_add_overlay(self):
+        clip = parse_entries('source | 3 | 6 | | 0 | textbox')[0]
+        command = app.build_video_cmd(clip, self.fmt, 0, 'source', 'unused-output')
+        graph = command[command.index('-filter_complex') + 1]
+        self.assertNotIn('drawtext', graph)
 
     def test_silent_source_never_references_source_audio(self):
         for waveform in (False, True):

@@ -8,14 +8,21 @@
 # WhatsApp size target: ./create_compilation.py --whatsapp --whatsapp-max-mb 50
 # Help: ./create_compilation.py --help
 #
-# Format for video clips: filename | start_time | end_time | [text_overlay] | [speed] | [arrow] | [waveform] | [noaudio]
+# Shot speed (details: README, "Shot Speed Analysis"):
+#   1. .venv-frame-viewer/bin/python frame_viewer.py "video.mp4" --start 1:15.7
+#      Ball mode, click ball, Save Points (2+ frames). Note start/end times.
+#   2. .venv-frame-viewer/bin/python shot_overlay.py frame_snapshots/*_points.json --distance 6.1 --from 1:15.821 --to 1:16.038 -o shot_overlay.png
+#   3. IMAGE | shot_overlay.png | 3 |   (freeze after clip ending at last marked frame)
+#
+# Format for video clips: filename | start_time | end_time | [text_overlay] | [speed] | [arrow] | [waveform] | [noaudio] | [textbox]
 # Format for black screens: BLACK | duration | text | [audio_file] | [audio_start] (default: middle of the audio)
 #   With audio_start, audio plays from that point and anything after duration seconds is cut from the end
-# Format for still images: IMAGE | filename | duration | [text] (stretched to the video resolution)
+# Format for still images: IMAGE | filename | duration | [text] | [textbox] (stretched to the video resolution)
 # 
 # Times: Use seconds (26), mm:ss (1:12), or hh:mm:ss (1:12:30). Decimals supported (26.23)
-# Optional fields can be in any order: text_overlay, speed, arrow, waveform, noaudio
+# Optional video fields can be in any order: text_overlay, speed, arrow, waveform, noaudio, textbox
 # Text overlay: Any text you want displayed. Use \n for a new line. Example: First line\nSecond line
+# Text style: black outline by default. Add textbox for a black background (60% opacity).
 # Speed: 1=normal, 0.5=half speed (slow motion), 2=double speed, -1=reverse, -0.5=reverse slow motion
 #   0=freeze: show the frame at start_time for (end_time - start_time) seconds, silent
 #   Slow motion (speed below 1) is always muted
@@ -61,6 +68,10 @@
 # Freeze frame (still at 3s, held for 2s):
 # 20251108_090053.mp4 | 3 | 5 | Look here! | 0
 #
+# Compare outline and textbox (same frozen frame, 3s each):
+# 20251108_090053.mp4 | 1:10 | 1:13 | Frislag! | 0
+# 20251108_090053.mp4 | 1:10 | 1:13 | Frislag! | 0 | textbox
+#
 # Black screen with text:
 # BLACK | 1.5 | Goal Highlights
 #
@@ -71,6 +82,7 @@
 #
 # Still image for 5 seconds:
 # IMAGE | screenshot.png | 5 |
+# IMAGE | screenshot.png | 5 | Final result | textbox
 #
 # Without audio:
 # 20251108_090053.mp4 | 3 | 5 | Nice goal! | 1 | noaudio
@@ -81,12 +93,27 @@
 
 
 # Add your video clips below (one per line):
-Screencast_from_2026-10-02_12-00-19.mp4 | 0 | 15 | | 1
-Screencast_from_2026-10-02_12-00-19.mp4 | 15 | 2:42 | | 20
-BLACK | 3 | A few moments later | a_few_moments_later_3s.flac | 0
-Screencast_from_2026-10-02_12-00-19.mp4 | 2:45 | 2:53 | | 1
-Screencast_from_2026-10-02_12-00-19.mp4 | 2:56 | 3:00 | | 1
-Screencast_from_2026-10-02_12-00-19.mp4 | 3:00 | 3:42 | | 20
-Screencast_from_2026-10-02_12-00-19.mp4 | 3:42 | 3:45 | | 1
-BLACK | 3 | And the result in gittools gerrit is...
-IMAGE | Screenshot_from_2026-10-02_12-10-09.png | 5 |
+#/h/patricsn/2026-Innebandy/2.IBKLundP2013L-Åstorp_Kvidinge_IBS_P12-14/20261010_140137.mp4 | 1:10 | 1:13 | Frislag! | 0 | textbox
+#/h/patricsn/2026-Innebandy/2.IBKLundP2013L-Åstorp_Kvidinge_IBS_P12-14/20261010_140137.mp4 | 1:15.8 | 1:16.0 | Frislag! | 1 | textbox
+
+#/h/patricsn/2026-Innebandy/2.IBKLundP2013L-Åstorp_Kvidinge_IBS_P12-14/20261010_140137.mp4 | 1:15.8 | 1:18.8 | Frislag! | 0 | textbox
+#/h/patricsn/2026-Innebandy/2.IBKLundP2013L-Åstorp_Kvidinge_IBS_P12-14/20261010_140137.mp4 | 1:15.8 | 1:18.9 | Frislag! | 0.01 | textbox
+
+
+/h/patricsn/2026-Innebandy/2.IBKLundP2013L-Åstorp_Kvidinge_IBS_P12-14/20261010_140137.mp4 | 1:15.5 | 1:15.971 | | 0.25
+IMAGE | shot_overlay.png | 3 |
+/h/patricsn/2026-Innebandy/2.IBKLundP2013L-Åstorp_Kvidinge_IBS_P12-14/20261010_140137.mp4 | 1:15.971 | 1:20 | | 1
+
+
+
+
+
+#/h/patricsn/2026-Innebandy/2.IBKLundP2013L-Åstorp_Kvidinge_IBS_P12-14/20261010_140137.mp4 | 1:10 | 1:18 | | 1
+#Screencast_from_2026-10-02_12-00-19.mp4 | 1:10 | 1:18 | | 1
+#BLACK | 3 | A few moments later | a_few_moments_later_3s.flac | 0
+#Screencast_from_2026-10-02_12-00-19.mp4 | 2:45 | 2:53 | | 1
+#Screencast_from_2026-10-02_12-00-19.mp4 | 2:56 | 3:00 | | 1
+#Screencast_from_2026-10-02_12-00-19.mp4 | 3:00 | 3:42 | | 20
+#Screencast_from_2026-10-02_12-00-19.mp4 | 3:42 | 3:45 | | 1
+#BLACK | 3 | And the result in gittools gerrit is...
+#IMAGE | Screenshot_from_2026-10-02_12-10-09.png | 5 |

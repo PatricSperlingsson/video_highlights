@@ -81,6 +81,7 @@ def parse_config(config_file):
                         'filename': parts[1],
                         'duration': parse_time(parts[2]),
                         'text': parts[3] if len(parts) > 3 else '',
+                        'textbox': any(field.lower() == 'textbox' for field in parts[4:]),
                     })
                 except ValueError as e:
                     print(f"Warning: Line {line_num} has invalid duration, skipping: {e}")
@@ -103,7 +104,7 @@ def parse_config(config_file):
             clip = {
                 'type': 'video', 'filename': parts[0], 'start': start, 'end': end,
                 'text': '', 'speed': 1.0, 'reverse': False, 'arrow': '',
-                'waveform': False, 'noaudio': False, 'freeze': False,
+                'waveform': False, 'noaudio': False, 'freeze': False, 'textbox': False,
             }
 
             # Optional fields may come in any order
@@ -115,6 +116,8 @@ def parse_config(config_file):
                     clip['waveform'] = True
                 elif low == 'noaudio':
                     clip['noaudio'] = True
+                elif low == 'textbox':
+                    clip['textbox'] = True
                 elif low == 'reverse':
                     clip['reverse'] = True
                 elif low == 'arrow' or low.startswith('arrow '):
@@ -205,10 +208,11 @@ def write_text_file(text, path, width):
     Path(path).write_text(wrapped, encoding='utf-8')
 
 
-def drawtext_filter(textfile, fontsize, y):
+def drawtext_filter(textfile, fontsize, y, textbox=False):
+    background = ':box=1:boxcolor=black@0.6:boxborderw=12' if textbox else ''
     return (f"drawtext=textfile={textfile}:expansion=none:fontsize={fontsize}:"
             f"fontcolor=white:bordercolor=black:borderw=3:line_spacing=10:text_align=C:"
-            f"x=(w-text_w)/2:y={y}")
+            f"x=(w-text_w)/2:y={y}{background}")
 
 
 def get_arrow_filter(arrow_spec, fmt):
@@ -299,7 +303,7 @@ def build_image_cmd(clip, fmt, index, output):
     if clip['text']:
         textfile = f'{TEMP_DIR}/text_{index:03d}.txt'
         write_text_file(clip['text'], textfile, 60)
-        vf.append(drawtext_filter(textfile, 48, 'h-text_h-60'))
+        vf.append(drawtext_filter(textfile, 48, 'h-text_h-60', clip.get('textbox', False)))
     vf.append(f'format={pix_fmt(fmt)}')
 
     return ['ffmpeg', '-hide_banner', '-loglevel', 'error', '-stats', '-y',
@@ -356,7 +360,7 @@ def build_video_cmd(clip, fmt, index, input_file, output):
     if clip['text']:
         textfile = f'{TEMP_DIR}/text_{index:03d}.txt'
         write_text_file(clip['text'], textfile, 60)
-        overlay.append(drawtext_filter(textfile, 48, 'h-text_h-60'))
+        overlay.append(drawtext_filter(textfile, 48, 'h-text_h-60', clip.get('textbox', False)))
     if clip['arrow']:
         arrow_filter = get_arrow_filter(clip['arrow'], fmt)
         if arrow_filter:
