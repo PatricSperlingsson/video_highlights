@@ -383,15 +383,38 @@ images; Pillow is needed (available in the frame-viewer environment).
 
 ## Commit And Push To GitHub
 
-This repository uses SSH to authenticate to your personal GitHub account.
-An SSH key or its fingerprint is not a personal access token and cannot be
-entered at an HTTPS password prompt.
+Authenticate to your personal GitHub account using GitHub CLI with HTTPS,
+or use an SSH key as an alternative.
 
 ### One-Time Setup On A New Computer Or Clone
 
+#### GitHub CLI With HTTPS
+
+Run in your terminal:
+
+```sh
+gh auth login --hostname github.com --git-protocol https --web
+```
+
+Follow the browser instructions and sign in as **PatricSperlingsson**. If asked
+to authenticate Git with your GitHub credentials, choose **Yes**. Then run:
+
+```sh
+gh auth setup-git
+git remote set-url origin https://github.com/PatricSperlingsson/video_highlights.git
+git push origin main
+```
+
+The credential setup and remote URL persist, so future pushes normally need
+only `git push origin main`. HTTPS authentication does not require an SSH agent.
+The branch is `main`, not `master`.
+
+#### SSH Alternative
+
 The computer needs the private SSH key matching a public key registered under
 your personal GitHub account in **Settings > SSH and GPG keys**. Never share
-the private key.
+the private key. An SSH key or its fingerprint is not a personal access token
+and cannot be entered at an HTTPS password prompt.
 
 ```sh
 ssh -T git@github.com
