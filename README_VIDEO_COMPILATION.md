@@ -96,7 +96,8 @@ to the working directory, not the config file's folder. Absolute paths and
 `~/` paths are also supported. Blank lines and lines starting with `#` are ignored.
 
 Times accept seconds (`26`, `26.23`), `mm:ss` (`1:12`) or `hh:mm:ss` (`1:12:30`).
-For video clips, end time must be after start time. Use positive durations for
+For video clips, end time must be after start time, except freezes (speed `0`),
+where the third field is a duration. Use positive durations for
 images and black screens.
 
 ### Video Clips
@@ -109,8 +110,8 @@ video.mp4 | 12 | 25 | | 5
 video.mp4 | 3 | 5 | Replay | 0.5
 video.mp4 | 3 | 5 | Reverse | -1
 video.mp4 | 3 | 5 | Reverse slow | -0.5
-video.mp4 | 3 | 6 | Look here! | 0
-video.mp4 | 3 | 6 | Look here! | 0 | textbox
+video.mp4 | 3 | 3 | Look here! | 0
+video.mp4 | 3 | 3 | Look here! | 0 | textbox
 video.mp4 | 3 | 5 | First line\nSecond line | arrow 270
 video.mp4 | 3 | 5 | | arrow 45:800:600 | waveform
 video.mp4 | 3 | 5 | Quiet clip | noaudio
@@ -129,15 +130,18 @@ Black title screens already have a black background and do not use this keyword.
 To compare both styles, place these entries consecutively:
 
 ```text
-video.mp4 | 1:10 | 1:13 | Frislag! | 0
-video.mp4 | 1:10 | 1:13 | Frislag! | 0 | textbox
+video.mp4 | 1:10 | 3 | Frislag! | 0
+video.mp4 | 1:10 | 3 | Frislag! | 0 | textbox
 ```
 
 Both show the same frame for three seconds; only the text background differs.
 
 - Speed defaults to `1`. `2` is twice as fast; `0.5` is half speed.
 - Negative speed reverses playback; `reverse` is also accepted as a keyword.
-- Speed `0` freezes the frame at start time for `end_time - start_time` seconds.
+- Speed `0` freezes the frame at start time. The third field is then the
+	**duration** in seconds, not an end time: `video.mp4 | 1:15.5 | 3 | Frislag! | 0`
+	freezes 1:15.5 for 3 seconds, even near the end of the video. Freezes longer
+	than 10 seconds print a warning, since older configs used an end time here.
 - Slow motion (speed below `1`) and freeze frames are silent.
 - Normal and fast clips retain audio; fast clips adjust audio tempo.
 - Inputs without audio automatically get silence. `noaudio` also forces silence.
@@ -445,9 +449,9 @@ upload untracked or uncommitted files. No force push is needed.
 	requirements above; some distributions package a limited build.
 - **Text formatting:** use `|` as the field separator and literal `\n` for
 	line breaks. Text files use UTF-8, supporting accented characters.
-- **"end time is not after start time":** the third field of a video clip is
-	an end time, not a duration. To freeze `1:15.8` for 3 seconds, write
-	`1:15.8 | 1:18.8 | ... | 0`.
+- **"end time is not after start time":** the third field of a moving video
+	clip is an end time, not a duration. To play `1:15.8` to `1:18.8`, write
+	`1:15.8 | 1:18.8`. Only freezes (speed `0`) use a duration.
 - **"No ball point saved" from shot_overlay.py:** open that frame in the viewer,
 	click the ball in **Ball** mode and **Save Points** again.
 

@@ -34,10 +34,22 @@ class ConfigTests(unittest.TestCase):
         self.assertTrue(clip['waveform'])
         self.assertTrue(clip['noaudio'])
 
-    def test_freeze(self):
-        clip = parse_entries('source | 3 | 6 | | 0')[0]
+    def test_freeze_third_field_is_duration(self):
+        clip = parse_entries('source | 3 | 3 | | 0')[0]
         self.assertTrue(clip['freeze'])
         self.assertEqual(clip['end'] - clip['start'], 3)
+        clip = parse_entries('source | 1:15.5 | 3 | Frislag! | 0')[0]
+        self.assertEqual((clip['start'], clip['end']), (75.5, 78.5))
+
+    def test_freeze_needs_positive_duration(self):
+        self.assertEqual(parse_entries('source | 3 | 0 | | 0'), [])
+
+    def test_long_freeze_warns_about_old_end_time_style(self):
+        with patch('builtins.open', mock_open(read_data='source | 1:10 | 1:13 | | 0')), \
+                patch('builtins.print') as output:
+            clip = app.parse_config('unused-config')[0]
+        self.assertEqual(clip['end'] - clip['start'], 73)
+        self.assertIn('duration, not an end time', output.call_args.args[0])
 
     def test_image(self):
         clip = parse_entries('IMAGE | screenshot | 5 |')[0]
@@ -129,7 +141,7 @@ class CommandTests(unittest.TestCase):
                 self.assertIn('anullsrc', graph)
 
     def test_freeze_uses_one_frame_and_silence(self):
-        clip = parse_entries('source | 3 | 6 | | 0')[0]
+        clip = parse_entries('source | 3 | 3 | | 0')[0]
         with patch.object(app, 'probe_has_audio') as probe:
             command = app.build_video_cmd(clip, self.fmt, 0, 'source', 'unused-output')
         probe.assert_not_called()

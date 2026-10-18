@@ -97,9 +97,6 @@ def parse_config(config_file):
             except ValueError as e:
                 print(f"Warning: Line {line_num} has invalid time values, skipping: {e}")
                 continue
-            if end <= start:
-                print(f"Warning: Line {line_num} end time is not after start time, skipping")
-                continue
 
             clip = {
                 'type': 'video', 'filename': parts[0], 'start': start, 'end': end,
@@ -136,6 +133,19 @@ def parse_config(config_file):
                     clip['text'] = field
                 else:
                     print(f"Warning: Line {line_num} unknown field '{field}', ignoring")
+
+            if clip['freeze']:
+                # For freezes the third field is a duration, so it may be smaller than start
+                if end <= 0:
+                    print(f"Warning: Line {line_num} freeze duration must be positive, skipping")
+                    continue
+                if end > 10:
+                    print(f"Warning: Line {line_num} freezes for {end:g}s; with speed 0 the "
+                          f"third field is a duration, not an end time")
+                clip['end'] = start + end
+            elif end <= start:
+                print(f"Warning: Line {line_num} end time is not after start time, skipping")
+                continue
 
             clips.append(clip)
 
